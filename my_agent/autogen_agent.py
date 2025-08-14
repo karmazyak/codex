@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
 import subprocess
 from pathlib import Path
 
@@ -36,6 +35,7 @@ from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from . import config
 from autogen_ext.tools.code_execution import PythonCodeExecutionTool
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 
@@ -71,40 +71,20 @@ VERIFICATION_SYSTEM_MESSAGE = (
     "user task in detail and then respond with TERMINATE."
 )
 
-SELECTOR_PROMPT = (
-    "You are coordinating a team that writes tests for Python code by selecting the "
-    "member who will speak/act next. The following team member roles are available:\n "
-    "{roles}.\n test_writing_assistant writes tests in Python .\n "
-    "verification_assistant evaluates the written tests, checking that they run and "
-    "work correctly (choose this role if you need to check/evaluate the tests that the "
-    "test_writing_assistant has written). \n The summary_agent provides the user with a "
-    "detailed summary of the study in the form of a report.\n\n\n\n Given the current "
-    "context, select the most appropriate next presenter.\n You should ONLY select the "
-    "summary_agent role if the tests have been written and checked and it is time to "
-    "create a report.\n\n\n\n Your selection should be based on: \n 1. Current stage of "
-    "test writing and validation.\n 2. Last speaker's findings or suggestions\n 3. Need for "
-    "test verification vs need for new information.\n Read the following conversation. "
-    "Then select the next role from {participants} to play. Return only the role.\n\n\n "
-    "{history}\n\n\n Read the above conversation. Then select the next role from "
-    "{participants} to play. ONLY RETURN THE ROLE."
-)
-
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
 
 def _create_model_client() -> OpenAIChatCompletionClient:
-    """Create the model client used by all agents.
+    """Create the model client used by all agents."""
 
-    The model name, base URL and API key can be provided via environment
-    variables ``OPENAI_MODEL``, ``OPENAI_BASE_URL`` and ``OPENAI_API_KEY``.
-    Defaults match the placeholder values in ``team-config.json``.
-    """
-
-    model = os.environ.get("OPENAI_MODEL", "DeepSeek-R1")
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://corellm.wb.ru/deepseek/v1")
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    return OpenAIChatCompletionClient(model=model, base_url=base_url, api_key=api_key, temperature=0.15)
+    return OpenAIChatCompletionClient(
+        model=config.MODEL,
+        base_url=config.BASE_URL,
+        api_key=config.API_KEY,
+        model_info=config.MODEL_INFO,
+        temperature=0.15,
+    )
 
 
 def build_team(code_dir: Path) -> RoundRobinGroupChat:
@@ -158,8 +138,6 @@ def build_team(code_dir: Path) -> RoundRobinGroupChat:
     team = RoundRobinGroupChat(
         [test_writer, verifier, summary_agent],
         termination_condition=termination,
-        selector_prompt=SELECTOR_PROMPT,
-        max_selector_attempts=3,
         emit_team_events=False,
     )
     return team
