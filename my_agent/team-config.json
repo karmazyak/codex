@@ -1,0 +1,182 @@
+{
+  "provider": "autogen_agentchat.teams.RoundRobinGroupChat",
+  "component_type": "team",
+  "version": 1,
+  "component_version": 1,
+  "description": "A team with 3 agents - a Test Writing Assistant that performs test writing in Python, a Verification Assistant that runs and validates tests, and a Summary Agent that provides a detailed markdown summary of the test developing as a report to the user.",
+  "label": "Python Test Writing Team",
+  "config": {
+    "participants": [
+      {
+        "provider": "autogen_agentchat.agents.AssistantAgent",
+        "component_type": "agent",
+        "version": 1,
+        "component_version": 1,
+        "description": "An agent that provides assistance with tool use.",
+        "label": "Test Writing Assistant",
+        "config": {
+          "name": "test_writing_assistant",
+          "model_client": {
+            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+            "component_type": "model",
+            "version": 1,
+            "component_version": 1,
+            "description": "DeepSeek",
+            "label": "DeepSeek",
+            "config": {
+              "model": "DeepSeek-R1",
+              "api_key": "***",
+              "base_url": "https://corellm.wb.ru/deepseek/v1",
+              "model_info": {
+                "json_output": "False",
+                "vision": "False",
+                "function_calling": "False",
+                "family": "mistral",
+                "structured_output": "False"
+              },
+              "temperature": 0.15
+            }
+          },
+          "workbench": {
+            "provider": "autogen_core.tools.StaticWorkbench",
+            "component_type": "workbench",
+            "version": 1,
+            "component_version": 1,
+            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+            "label": "StaticWorkbench",
+            "config": {
+              "tools": []
+            }
+          },
+          "model_context": {
+            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+            "component_type": "chat_completion_context",
+            "version": 1,
+            "component_version": 1,
+            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+            "label": "UnboundedChatCompletionContext",
+            "config": {}
+          },
+          "description": "An agent that provides assistance with ability to use tools.",
+          "system_message": "You are an expert Python developer with deep knowledge of software testing, including unit tests, integration tests, and best practices for test-driven development (TDD). Your task is to analyze Python code and generate high-quality, maintainable, and efficient test cases. Instructions:  1. Understand the Code:    - Carefully review the provided Python code, including functions, classes, and dependencies.    - Identify edge cases, expected behavior, and potential failure points.  2. Choose a Testing Framework:     - Default to `pytest` if no framework is specified.     - Ensure compatibility with the code’s dependencies (e.g., `mock` for external services).  3. Generate Tests:  - Write tests that cover:       - Happy Path (normal operation).       - Edge Cases (empty inputs, invalid types, boundary conditions).       - Error Handling (exceptions, invalid states).     - Include descriptive docstrings or comments explaining each test’s purpose.     - Use fixtures (`pytest`) or `setUp/tearDown` (`unittest`) where needed.  4. Output Format:     - Return the test code in a complete, executable format.     - If the original code has bugs, note them and write tests to catch them.  When done, say TERMINATE.",
+          "model_client_stream": false,
+          "reflect_on_tool_use": false,
+          "tool_call_summary_format": "{result}",
+          "metadata": {}
+        }
+      },
+      {
+        "provider": "autogen_agentchat.agents.AssistantAgent",
+        "component_type": "agent",
+        "version": 1,
+        "component_version": 1,
+        "description": "an agent that verifies and summarizes information",
+        "label": "Verification Assistant",
+        "config": {
+          "name": "verification_assistant",
+          "model_client": {
+            "provider": "autogen_ext.models.openai.OpenAIChatCompletionClient",
+            "component_type": "model",
+            "version": 1,
+            "component_version": 1,
+            "description": "DeepSeek",
+            "label": "DeepSeek",
+            "config": {
+              "model": "DeepSeek-R1",
+              "api_key": "***",
+              "base_url": "https://corellm.wb.ru/deepseek/v1",
+              "model_info": {
+                "json_output": "False",
+                "vision": "False",
+                "function_calling": "False",
+                "family": "mistral",
+                "structured_output": "False"
+              },
+              "temperature": 0.15
+            }
+          },
+          "workbench": {
+            "provider": "autogen_core.tools.StaticWorkbench",
+            "component_type": "workbench",
+            "version": 1,
+            "component_version": 1,
+            "description": "A workbench that provides a static set of tools that do not change after\n    each tool execution.",
+            "label": "StaticWorkbench",
+            "config": {
+              "tools": [
+                {
+                  "provider": "autogen_ext.tools.code_execution.PythonCodeExecutionTool",
+                  "component_type": "tool",
+                  "version": 1,
+                  "component_version": 1,
+                  "description": "A tool that executes Python code in a local environment.",
+                  "label": "Python Code Execution Tool",
+                  "config": {
+                    "executor": {
+                      "provider": "autogen_ext.code_executors.local.LocalCommandLineCodeExecutor",
+                      "component_type": "code_executor",
+                      "version": 1,
+                      "component_version": 1,
+                      "description": "A code executor class that executes code through a local command line\n    environment.",
+                      "label": "LocalCommandLineCodeExecutor",
+                      "config": {
+                        "timeout": 360,
+                        "work_dir": ".coding",
+                        "functions_module": "functions"
+                      }
+                    },
+                    "description": "Execute Python code blocks.",
+                    "name": "Python_Code_Execution_Tool"
+                  }
+                }
+              ]
+            }
+          },
+          "model_context": {
+            "provider": "autogen_core.model_context.UnboundedChatCompletionContext",
+            "component_type": "chat_completion_context",
+            "version": 1,
+            "component_version": 1,
+            "description": "An unbounded chat completion context that keeps a view of the all the messages.",
+            "label": "UnboundedChatCompletionContext",
+            "config": {}
+          },
+          "description": "an agent that verifies and summarizes information",
+          "system_message": "You are a task verification assistant who is working with a test writer agent to solve tasks. At each point, check if the task has been completed as requested by the user. If the test_assistant_agent responds and the task has not yet been completed, respond with what is left to do and then say 'keep going'. If and only when the task has been completed, summarize and present a final answer that directly addresses the user task in detail and then respond with TERMINATE.",
+          "model_client_stream": false,
+          "reflect_on_tool_use": true,
+          "tool_call_summary_format": "{result}",
+          "metadata": {},
+          "tools": []
+        }
+      },
+      {
+        "provider": "autogen_agentchat.agents.UserProxyAgent",
+        "component_type": "agent",
+        "version": 1,
+        "component_version": 1,
+        "description": "An agent that can represent a human user through an input function.",
+        "label": "Summary Agent",
+        "config": {
+          "name": "summary_agent",
+          "description": "a human user that should be consulted only when the verification_assistant is unable to verify the information provided by the test_assistant_agent"
+        }
+      }
+    ],
+    "termination_condition": {
+      "provider": "autogen_agentchat.conditions.TextMentionTermination",
+      "component_type": "termination",
+      "version": 1,
+      "component_version": 1,
+      "description": "Terminate the conversation if a specific text is mentioned.",
+      "label": "TextMentionTermination",
+      "config": {
+        "text": "TERMINATE"
+      }
+    },
+    "selector_prompt": "You are coordinating a team that writes tests for Python code by selecting the member who will speak/act next. The following team member roles are available:\n {roles}.\n test_writing_assistant writes tests in Python .\n verification_assistant evaluates the written tests, checking that they run and work correctly (choose this role if you need to check/evaluate the tests that the test_writing_assistant has written). \n The summary_agent provides the user with a detailed summary of the study in the form of a report.\n\n\n\n Given the current context, select the most appropriate next presenter.\n You should ONLY select the summary_agent role if the tests have been written and checked and it is time to create a report.\n\n\n\n Your selection should be based on: \n 1. Current stage of test writing and validation.\n 2. Last speaker's findings or suggestions\n 3. Need for test verification vs need for new information.\n Read the following conversation. Then select the next role from {participants} to play. Return only the role.\n\n\n {history}\n\n\n Read the above conversation. Then select the next role from {participants} to play. ONLY RETURN THE ROLE.",
+    "allow_repeated_speaker": true,
+    "max_selector_attempts": 3,
+    "emit_team_events": false
+  }
+}
