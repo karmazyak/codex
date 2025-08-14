@@ -15,15 +15,18 @@ constructed programmatically so the agent can be executed without a UI.
 
 Example
 -------
-Run the team on a simple request against the current repository:
+Run the team on a simple request against the current repository.  A diff of
+any resulting code changes is printed at the end and the conversation can be
+logged for future runs:
 
-``python my_agent/autogen_agent.py "Write tests for a fibonacci function" .``"""
+``python my_agent/autogen_agent.py "Write tests for a fibonacci function" . --log-file my_agent/conversation.log``"""
 
 from __future__ import annotations
 
 import argparse
 import asyncio
 import os
+import subprocess
 from pathlib import Path
 
 from autogen_core import CancellationToken
@@ -146,14 +149,44 @@ def build_team(code_dir: Path) -> RoundRobinGroupChat:
     return team
 
 
-async def run(task: str, code_dir: Path) -> None:
-    """Run the agent team on the given task and stream output to the console."""
+async def run(task: str, code_dir: Path, log_file: Path | None = None) -> None:
+    """Run the agent team on the given task and stream output to the console.
+
+    If ``log_file`` is provided, previous conversation is prepended to the task
+    and the new task is appended to the file after execution.  A ``git diff`` of
+    ``code_dir`` is printed once the agents finish.
+    """
+
+    history = ""
+    if log_file and log_file.exists():
+        history = log_file.read_text(encoding="utf-8").strip()
+    full_task = f"{history}\n\n{task}" if history else task
 
     team = build_team(code_dir)
     await team.reset()
     await Console(
-        team.run_stream(task=task, cancellation_token=CancellationToken())
+        team.run_stream(task=full_task, cancellation_token=CancellationToken())
     )
+
+    if log_file:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        with log_file.open("a", encoding="utf-8") as f:
+            f.write(f"{task}\n")
+
+    try:
+        diff = subprocess.run(
+            ["git", "-C", str(code_dir), "--no-pager", "diff"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if diff.stdout:
+            print("\n--- Code diff ---\n")
+            print(diff.stdout)
+        else:
+            print("\nNo code changes detected.\n")
+    except Exception as exc:  # pragma: no cover - diff is best-effort
+        print(f"Could not display diff: {exc}")
 
 
 def main() -> None:
@@ -164,8 +197,14 @@ def main() -> None:
         type=Path,
         help="Path to the code repository the agents should modify and execute",
     )
+    parser.add_argument(
+        "--log-file",
+        type=Path,
+        default=None,
+        help="Optional file to store conversation history for subsequent runs",
+    )
     args = parser.parse_args()
-    asyncio.run(run(args.task, args.code_dir))
+    asyncio.run(run(args.task, args.code_dir, args.log_file))
 
 
 if __name__ == "__main__":
