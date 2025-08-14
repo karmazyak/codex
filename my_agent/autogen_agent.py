@@ -71,6 +71,24 @@ VERIFICATION_SYSTEM_MESSAGE = (
     "user task in detail and then respond with TERMINATE."
 )
 
+SELECTOR_PROMPT = (
+    "You are coordinating a team that writes tests for Python code by selecting the "
+    "member who will speak/act next. The following team member roles are available:\n "
+    "{roles}.\n test_writing_assistant writes tests in Python .\n "
+    "verification_assistant evaluates the written tests, checking that they run and "
+    "work correctly (choose this role if you need to check/evaluate the tests that the "
+    "test_writing_assistant has written). \n The summary_agent provides the user with a "
+    "detailed summary of the study in the form of a report.\n\n\n\n Given the current "
+    "context, select the most appropriate next presenter.\n You should ONLY select the "
+    "summary_agent role if the tests have been written and checked and it is time to "
+    "create a report.\n\n\n\n Your selection should be based on: \n 1. Current stage of "
+    "test writing and validation.\n 2. Last speaker's findings or suggestions\n 3. Need for "
+    "test verification vs need for new information.\n Read the following conversation. "
+    "Then select the next role from {participants} to play. Return only the role.\n\n\n "
+    "{history}\n\n\n Read the above conversation. Then select the next role from "
+    "{participants} to play. ONLY RETURN THE ROLE."
+)
+
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
@@ -108,13 +126,9 @@ def build_team(code_dir: Path) -> RoundRobinGroupChat:
     )
     python_tool_writer = PythonCodeExecutionTool(
         executor=executor,
-        description="Execute Python code blocks and edit files.",
-        name="Python_Code_Execution_Tool",
     )
     python_tool_verifier = PythonCodeExecutionTool(
         executor=executor,
-        description="Execute Python code blocks and edit files.",
-        name="Python_Code_Execution_Tool",
     )
 
     test_writer = AssistantAgent(
@@ -144,7 +158,9 @@ def build_team(code_dir: Path) -> RoundRobinGroupChat:
     team = RoundRobinGroupChat(
         [test_writer, verifier, summary_agent],
         termination_condition=termination,
-        allow_repeated_speaker=True,
+        selector_prompt=SELECTOR_PROMPT,
+        max_selector_attempts=3,
+        emit_team_events=False,
     )
     return team
 
