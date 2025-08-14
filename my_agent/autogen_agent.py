@@ -35,9 +35,11 @@ from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
-from . import config
+from model_config import OpenAIConfig
 from autogen_ext.tools.code_execution import PythonCodeExecutionTool
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
+
+
 
 # ---------------------------------------------------------------------------
 # System messages are copied from ``team-config.json`` so behaviour mirrors
@@ -77,12 +79,12 @@ VERIFICATION_SYSTEM_MESSAGE = (
 
 def _create_model_client() -> OpenAIChatCompletionClient:
     """Create the model client used by all agents."""
-
+    config = OpenAIConfig().from_env()
     return OpenAIChatCompletionClient(
-        model=config.MODEL,
-        base_url=config.BASE_URL,
-        api_key=config.API_KEY,
-        model_info=config.MODEL_INFO,
+        model=config.model,
+        base_url=config.base_url,
+        api_key=config.api_key,
+        model_info=config.model_info,
         temperature=0.15,
     )
 
