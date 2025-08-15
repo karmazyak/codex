@@ -7,6 +7,8 @@ node_modules
 # Keep pnpm-lock.yaml
 !pnpm-lock.yaml
 
+.env
+
 # build
 dist/
 build/

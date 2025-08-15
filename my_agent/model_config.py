@@ -13,7 +13,7 @@ class OpenAIConfig:
     model_info: ModelInfo = field(
         default_factory=lambda: ModelInfo(
             vision=False,
-            function_calling=False,
+            function_calling=True,
             json_output=False,
             family="mistral",
             structured_output=True,
