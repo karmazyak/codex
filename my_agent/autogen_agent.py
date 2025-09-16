@@ -82,11 +82,13 @@ VERIFICATION_SYSTEM_MESSAGE = (
 
 def _create_model_client() -> OpenAIChatCompletionClient:
     """Create the model client used by all agents."""
-    config = OpenAIConfig().from_env()
+    config = OpenAIConfig.from_env()
     return OpenAIChatCompletionClient(
         model=config.model,
         base_url=config.base_url,
         api_key=config.api_key,
+        request_timeout=config.request_timeout,
+        max_retries=config.max_retries,
         model_info=config.model_info,
         temperature=0.15,
     )
