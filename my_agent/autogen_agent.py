@@ -27,8 +27,6 @@ import argparse
 import asyncio
 import subprocess
 from pathlib import Path
-from dotenv import load_dotenv
-load_dotenv()
 
 from autogen_core import CancellationToken
 from autogen_core.tools import StaticWorkbench
@@ -40,7 +38,6 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from model_config import OpenAIConfig
 from autogen_ext.tools.code_execution import PythonCodeExecutionTool
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
-
 
 
 
@@ -82,47 +79,16 @@ VERIFICATION_SYSTEM_MESSAGE = (
 
 def _create_model_client() -> OpenAIChatCompletionClient:
     """Create the model client used by all agents."""
-    config = OpenAIConfig().from_env()
+    config = OpenAIConfig.from_env()
     return OpenAIChatCompletionClient(
         model=config.model,
         base_url=config.base_url,
         api_key=config.api_key,
+        request_timeout=config.request_timeout,
+        max_retries=config.max_retries,
         model_info=config.model_info,
         temperature=0.15,
     )
-
-async def test():
-    assistant_system_message = (
-        'You are an expert Python developer with deep knowledge of software testing, '
-        'including unit tests, integration tests, and best practices for test-driven development (TDD). '
-        'Your task is to analyze Python code and generate high-quality, maintainable, and efficient test cases. '
-        'Instructions: ...'
-    )
-
-    model_client = _create_model_client()
-    primary_agent = AssistantAgent(
-        "test_writer",
-        model_client=model_client,
-        system_message=assistant_system_message,
-    )
-
-    critic_system_message = (
-        "You are a task verification assistant who is working with a test writer agent to solve tasks. "
-        "At each point, check if the task has been completed as requested by the user. "
-        "You MUST run and validate all the tests provided by test_writer as completed. "
-        "..."
-    )
-
-    critic_agent = AssistantAgent(
-        "critic",
-        model_client=model_client,
-        system_message=critic_system_message
-    )
-
-    text_termination = TextMentionTermination("APPROVE")
-    team = RoundRobinGroupChat([primary_agent, critic_agent], termination_condition=text_termination)
-    await team.reset()  # Сброс состояния команды
-    print(await Console(team.run_stream(task="Write a function in Python and several tests for it.")))
 
 
 def build_team(code_dir: Path) -> RoundRobinGroupChat:
@@ -134,6 +100,7 @@ def build_team(code_dir: Path) -> RoundRobinGroupChat:
         Directory containing the code under test.  All file operations and
         execution performed by the agents occur relative to this directory.
     """
+
     model_client = _create_model_client()
 
     executor = LocalCommandLineCodeExecutor(
@@ -188,9 +155,6 @@ async def run(task: str, code_dir: Path, log_file: Path | None = None) -> None:
     ``code_dir`` is printed once the agents finish.
     """
 
-    await test()
-    print('11111')
-    
     history = ""
     if log_file and log_file.exists():
         history = log_file.read_text(encoding="utf-8").strip()
