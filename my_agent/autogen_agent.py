@@ -119,8 +119,18 @@ async def test():
         system_message=critic_system_message
     )
 
-    text_termination = TextMentionTermination("APPROVE")
-    team = RoundRobinGroupChat([primary_agent, critic_agent], termination_condition=text_termination)
+    # Both agents are instructed to end the conversation with the word
+    # "TERMINATE".  The previous implementation waited for the word
+    # "APPROVE", which was never produced, causing the team to loop
+    # indefinitely.  Listening for "TERMINATE" ensures the run ends once
+    # either agent signals completion.  As a safeguard, limit the chat to
+    # a small number of turns.
+    text_termination = TextMentionTermination("TERMINATE")
+    team = RoundRobinGroupChat(
+        [primary_agent, critic_agent],
+        termination_condition=text_termination,
+        max_turns=4,
+    )
     await team.reset()  # Сброс состояния команды
     print(await Console(team.run_stream(task="Write a function in Python and several tests for it.")))
 
